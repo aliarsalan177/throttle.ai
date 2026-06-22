@@ -8,8 +8,8 @@ TRE is built to **reduce the tokens every request spends**, so you get **more ou
 
 Point any coding agent at it. It speaks the provider's exact wire protocol, so nothing in your setup changes but the bill.
 
-![status](https://img.shields.io/badge/status-transparent%20proxy-blue)
-![tests](https://img.shields.io/badge/tests-123%20passing-brightgreen)
+![status](https://img.shields.io/badge/status-reducing%20tokens-brightgreen)
+![tests](https://img.shields.io/badge/tests-158%20passing-brightgreen)
 ![coverage](https://img.shields.io/badge/coverage-~99%25-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A520-339933?logo=node.js&logoColor=white)
 ![typescript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
@@ -51,15 +51,25 @@ zero code changes beyond pointing the base URL.
 
 ```mermaid
 flowchart LR
-    R[Request] --> S1[cache]:::on --> S2[dedup]:::on --> S3[strip]:::on --> S4[filediff]:::risk --> S5[slice]:::risk --> S6[intent]:::risk --> OUT[Optimized]
+    R[Request] --> S1[cache]:::on --> S2[strip]:::on --> S3[dedup]:::off --> S4[filediff]:::off --> S5[slice]:::exp --> S6[intent]:::exp --> OUT[Optimized]
     classDef on fill:#1f6f43,stroke:#2ea043,color:#fff;
-    classDef risk fill:#5a3a00,stroke:#bb8009,color:#fff;
+    classDef off fill:#5a3a00,stroke:#bb8009,color:#fff;
+    classDef exp fill:#30363d,stroke:#555,color:#aaa;
 ```
 
-<sub>🟢 lossless / low-risk &nbsp;&nbsp; 🟠 lossy — flag-gated, off until benchmarked</sub>
+<sub>🟢 lossless, **on by default** &nbsp;&nbsp; 🟠 lossy, opt-in (toggle in the dashboard) &nbsp;&nbsp; ⚪ experimental</sub>
 
-Each stage is independently toggleable, its savings are **measured with the tokenizer** (never
-self-reported), and any lossy stage that doesn't beat a threshold is **auto-reverted**.
+| Stage | What it does | Default |
+|---|---|---|
+| **cache** | Marks the stable prefix for provider-native prompt caching (lossless) | ✅ on |
+| **strip** | Trims whitespace + removes exact-duplicate boilerplate (lossless) | ✅ on |
+| **dedup** | Collapses a large block re-sent verbatim later in the same conversation | opt-in |
+| **filediff** | Replaces a re-sent file with a unified diff vs. its previous version | opt-in |
+| **slice / intent** | AST slicing / metadata extraction | experimental |
+
+Each stage is independently toggleable, its savings are **measured with a real tokenizer** (never
+self-reported), and any lossy stage that doesn't beat a token threshold is **auto-reverted** that
+request — so a stage can never make a request *bigger*.
 
 ---
 
@@ -141,9 +151,9 @@ tokenize? Plenty of tools out there:
 **📖 Background**
 - **What are tokens & how to count them (OpenAI)** — https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
 
-> The proxy ships with a fast approximate counter for relative deltas and swaps in the exact
-> per-model tokenizers (`tiktoken` for OpenAI, `@anthropic-ai/tokenizer` for Claude) for
-> billing-grade numbers — char-count estimates are never used for spend decisions.
+> The proxy counts with a **real BPE tokenizer** (`gpt-tokenizer`) — exact for OpenAI models and a
+> close estimate for other providers (clearly flagged) — so the savings log reflects what you're
+> actually billed. Char-count estimates are never used for spend decisions.
 
 ---
 
@@ -246,34 +256,56 @@ It talks to read-only management endpoints on the proxy — no cloud egress:
 
 ```
 packages/
-  core/        @tre/core   — pure reduction pipeline (no I/O)
-  proxy/       @tre/proxy   — Hono server, Anthropic + OpenAI, SSE passthrough
-  mcp/         @tre/mcp     — context-store MCP server (stub)
-  vscode-ext/               — VS Code extension (placeholder)
+  core/        @tre/core   — reduction pipeline, stages, tokenizer, stores (pure)
+  proxy/       @tre/proxy   — Hono server, Anthropic + OpenAI, SSE, dashboard API, persistence
+  mcp/         @tre/mcp     — context-store MCP server (context.put / context.get)
+  vscode-ext/  tre-vscode   — VS Code extension (status-bar savings + commands)
 apps/
   dashboard/   @tre/dashboard — local savings UI + token calculator (Vite + React)
+```
+
+## Persistence
+
+Sessions + metrics are in-memory by default. Set a data directory to keep them across restarts:
+
+```bash
+TRE_DATA_DIR=~/.tre node packages/proxy/dist/index.js   # writes sessions.json + metrics.json
+```
+
+## MCP server
+
+For MCP-aware clients, a context store is exposed over stdio (`context.put` → short id,
+`context.get` → expand), so clients can stash stable context once and reference it by id:
+
+```bash
+node packages/mcp/dist/index.js     # stdio MCP server: tre-context
 ```
 
 ## Roadmap
 
 ```mermaid
 flowchart LR
-    A["✅ Transparent proxy"] --> B["Metrics"] --> C["✅ Dashboard + calculator"] --> D["Cache + dedup"] --> E["Diff + slice"] --> F["✅ Sessions + resume"] --> G["MCP server"] --> H["VS Code extension"]
+    A["✅ Proxy + streaming"] --> B["✅ Metrics + dashboard"] --> C["✅ Token calculator"] --> D["✅ Cache + strip + dedup + diff"] --> E["✅ Exact tokenizer"] --> F["✅ Sessions + resume + persistence"] --> G["✅ MCP server"] --> H["✅ VS Code extension"]
     style A fill:#1f6f43,stroke:#2ea043,color:#fff
+    style B fill:#1f6f43,stroke:#2ea043,color:#fff
     style C fill:#1f6f43,stroke:#2ea043,color:#fff
+    style D fill:#1f6f43,stroke:#2ea043,color:#fff
+    style E fill:#1f6f43,stroke:#2ea043,color:#fff
     style F fill:#1f6f43,stroke:#2ea043,color:#fff
+    style G fill:#1f6f43,stroke:#2ea043,color:#fff
+    style H fill:#1f6f43,stroke:#2ea043,color:#fff
 ```
 
-**Status:** the transparent passthrough proxy is shipped and verified end-to-end, with the live
-dashboard, token calculator, and session resume working. With the default config the proxy forwards
-requests byte-for-byte and streams responses through untouched — every reduction stage exists as a
-no-op stub, off by default, ready to be enabled and benchmarked.
+**Status:** end-to-end working. Lossless reduction (cache + strip) is on by default; lossy stages
+(dedup, filediff) are implemented and one toggle away in the dashboard. Exact tokenization, session
+resume + disk persistence, the MCP context server, and the VS Code extension are all built. Next:
+benchmark the lossy stages to a ≥99% task-success bar before flipping them on by default.
 
 ## Develop
 
 ```bash
 pnpm -r build          # build every package
-pnpm -r test           # vitest — 123 tests
+pnpm -r test           # vitest — 158 tests
 pnpm test:coverage     # coverage report (~99% on core + proxy)
 pnpm smoke             # runtime check against compiled dist
 pnpm dev:proxy         # run the proxy with hot reload

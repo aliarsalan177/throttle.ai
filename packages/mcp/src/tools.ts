@@ -1,9 +1,10 @@
 import { ContextStore } from "./store.js";
 
-/** MCP tool result shape (text content blocks). */
+/** MCP tool result shape (text content blocks). Index signature matches the SDK's CallToolResult. */
 export interface McpTextResult {
   content: Array<{ type: "text"; text: string }>;
   isError?: boolean;
+  [k: string]: unknown;
 }
 
 export interface ContextTool {

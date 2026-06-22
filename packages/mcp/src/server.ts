@@ -30,7 +30,10 @@ export function createMcpServer(store: ContextStore = new ContextStore()): TreMc
       tool.name,
       tool.description,
       INPUT_SCHEMAS[tool.name] ?? {},
-      async (args: Record<string, unknown>) => tool.handler(args),
+      // SDK's CallToolResult carries an index signature; our typed handler result
+      // is structurally compatible, so widen to satisfy the overload.
+      async (args: Record<string, unknown>): Promise<{ content: Array<{ type: "text"; text: string }>; [k: string]: unknown }> =>
+        tool.handler(args),
     );
   }
 

@@ -8,7 +8,9 @@ node_modules/
 
 # Build output
 dist/
+out/
 *.tsbuildinfo
+*.vsix
 
 # Local data / config
 *.sqlite

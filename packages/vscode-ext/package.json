@@ -1,12 +1,51 @@
 {
-  "name": "@tre/vscode-ext",
+  "name": "tre-vscode",
+  "displayName": "Token Reduction Engine",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
-  "description": "VS Code extension for TRE config + live savings view.",
+  "description": "Config + live savings view for the TRE local proxy.",
+  "publisher": "tre",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "main": "./out/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "tre.showSavings", "title": "TRE: Show Savings" },
+      { "command": "tre.openDashboard", "title": "TRE: Open Dashboard" },
+      { "command": "tre.copyBaseUrl", "title": "TRE: Copy Proxy Base URL" }
+    ],
+    "configuration": {
+      "title": "Token Reduction Engine",
+      "properties": {
+        "tre.proxyUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8787",
+          "description": "Base URL of the local TRE proxy."
+        },
+        "tre.dashboardUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:5173",
+          "description": "URL of the local TRE dashboard."
+        },
+        "tre.refreshSeconds": {
+          "type": "number",
+          "default": 5,
+          "description": "How often to refresh the savings status bar item."
+        }
+      }
+    }
+  },
   "scripts": {
-    "build": "node -e \"console.log('[tre] vscode-ext is a placeholder; nothing to build yet')\"",
-    "typecheck": "node -e \"console.log('[tre] vscode-ext: no typecheck yet')\"",
-    "test": "node -e \"console.log('[tre] vscode-ext: no tests yet')\""
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node -e \"console.log('[tre] vscode-ext: no unit tests (extension host required)')\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.6.3"
   }
 }
