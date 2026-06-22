@@ -2,14 +2,24 @@
 import { serve } from "@hono/node-server";
 import { createServer } from "./server.js";
 import { loadConfig } from "./config.js";
+import { loadPersistence } from "./persistence.js";
 
 /**
- * CLI entrypoint. Binds 127.0.0.1 by default (security model §5) and prints the
- * base URLs to point coding agents at.
+ * CLI entrypoint. Binds 127.0.0.1 by default and prints the base URLs to point
+ * coding agents at. Set TRE_DATA_DIR to persist sessions + metrics across
+ * restarts (in-memory otherwise).
  */
 function main(): void {
   const proxyConfig = loadConfig();
-  const { app } = createServer({ proxyConfig });
+  const dataDir = process.env.TRE_DATA_DIR;
+  const persistence = dataDir ? loadPersistence(dataDir) : undefined;
+
+  const { app } = createServer({
+    proxyConfig,
+    history: persistence?.history,
+    metrics: persistence?.metrics,
+    onActivity: persistence ? () => persistence.save() : undefined,
+  });
 
   serve({ fetch: app.fetch, hostname: proxyConfig.host, port: proxyConfig.port }, (info) => {
     const base = `http://${proxyConfig.host}:${info.port}`;
@@ -18,6 +28,7 @@ function main(): void {
     console.log(`[tre]   OpenAI     → set OPENAI_BASE_URL=${base}/v1`);
     console.log(`[tre]   upstream(anthropic)=${proxyConfig.upstream.anthropic}`);
     console.log(`[tre]   upstream(openai)=${proxyConfig.upstream.openai}`);
+    console.log(`[tre]   persistence=${dataDir ?? "off (in-memory)"}`);
   });
 }
 

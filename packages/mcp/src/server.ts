@@ -1,43 +1,38 @@
-import { InMemoryContextRegistry } from "@tre/core";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { ContextStore } from "./store.js";
+import { buildContextTools } from "./tools.js";
 
 /**
- * MCP server — phase 2 (milestone M5).
+ * MCP server exposing the TRE context store.
  *
- * Scope: MCP injects *context and tools*, not
- * the user's primary prompt, and only for MCP-aware clients. It is NOT a full
- * interceptor — that's the proxy's job. This server's role is to expose the
- * shared context store so MCP-aware clients can register/fetch stable context
- * ids instead of re-sending unchanged blocks.
- *
- * STUB: defines the intended tool surface but does not yet speak the MCP wire
- * protocol. M5 wires this to `@modelcontextprotocol/sdk`.
+ * Scope: MCP injects *context and tools*, not the user's primary prompt, and
+ * only for MCP-aware clients. It is NOT a full interceptor — that's the proxy's
+ * job. This server lets MCP-aware clients register/fetch stable context ids
+ * (`context.put` / `context.get`) instead of re-sending unchanged blocks.
  */
-
-export interface ContextStoreTool {
-  name: string;
-  description: string;
+export interface TreMcp {
+  server: McpServer;
+  store: ContextStore;
 }
 
-export const PLANNED_TOOLS: ContextStoreTool[] = [
-  {
-    name: "context.put",
-    description: "Store a context block and return a stable id for cheap re-reference.",
-  },
-  {
-    name: "context.get",
-    description: "Expand a previously stored context id back to its full content.",
-  },
-];
+const INPUT_SCHEMAS: Record<string, z.ZodRawShape> = {
+  "context.put": { content: z.string(), label: z.string().optional() },
+  "context.get": { id: z.string() },
+};
 
-export interface McpServer {
-  tools: ContextStoreTool[];
-  registry: InMemoryContextRegistry;
-}
+/** Build the MCP server with the context tools registered. */
+export function createMcpServer(store: ContextStore = new ContextStore()): TreMcp {
+  const server = new McpServer({ name: "tre-context", version: "0.0.0" });
 
-/** Construct the (stub) server. Real MCP transport binding lands in M5. */
-export function createMcpServer(): McpServer {
-  return {
-    tools: PLANNED_TOOLS,
-    registry: new InMemoryContextRegistry(),
-  };
+  for (const tool of buildContextTools(store)) {
+    server.tool(
+      tool.name,
+      tool.description,
+      INPUT_SCHEMAS[tool.name] ?? {},
+      async (args: Record<string, unknown>) => tool.handler(args),
+    );
+  }
+
+  return { server, store };
 }

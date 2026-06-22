@@ -45,13 +45,18 @@ describe("stage registry", () => {
     expect(toggleKeyFor("nope")).toBeUndefined();
   });
 
-  it("all stages ship disabled by default", () => {
-    expect(orderedStages.every((s) => s.enabled === false)).toBe(true);
+  it("lossless stages (cache, strip) are enabled, lossy ones disabled by default", () => {
+    const byName = Object.fromEntries(orderedStages.map((s) => [s.name, s]));
+    expect(byName.cache!.enabled).toBe(true);
+    expect(byName.strip!.enabled).toBe(true);
+    expect(byName.dedup!.enabled).toBe(false);
+    expect(byName.filediff!.enabled).toBe(false);
   });
 
-  it("every stub is a no-op that returns the request unchanged", async () => {
+  it("experimental stubs (slice, intent) are no-ops returning the request unchanged", async () => {
     const input = req();
-    for (const s of orderedStages) {
+    for (const name of ["slice", "intent"]) {
+      const s = orderedStages.find((x) => x.name === name)!;
       const out = await s.run(input, ctx);
       expect(out.req).toBe(input);
       expect(out.saved).toBe(0);
@@ -62,8 +67,8 @@ describe("stage registry", () => {
     const byName = Object.fromEntries(orderedStages.map((s) => [s.name, s]));
     const reversibility = async (name: string) => (await byName[name]!.run(req(), ctx)).reversible;
     expect(await reversibility("cache")).toBe(true);
-    expect(await reversibility("dedup")).toBe(true);
     expect(await reversibility("strip")).toBe(true);
+    expect(await reversibility("dedup")).toBe(false); // lossy: collapses repeats
     expect(await reversibility("filediff")).toBe(false);
     expect(await reversibility("slice")).toBe(false);
     expect(await reversibility("intent")).toBe(false);

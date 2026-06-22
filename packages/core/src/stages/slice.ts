@@ -1,7 +1,7 @@
 import type { NormalizedRequest, SessionContext, Stage, StageResult } from "../types.js";
 
 /**
- * STAGE: AST-aware focused file slicing (M3) — medium risk.
+ * STAGE: AST-aware focused file slicing — medium risk.
  *
  * When a large file is included but the task references specific symbols, slice
  * to the relevant function(s) plus the signatures of their dependencies, rather

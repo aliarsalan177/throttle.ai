@@ -3,7 +3,7 @@ import type { ContextRegistry } from "./types.js";
 /**
  * Cross-turn context registry (content-hash → stable id).
  *
- * M4 backs this with SQLite (`better-sqlite3`) for persistence across proxy
+ * A later version backs this with SQLite (`better-sqlite3`) for persistence across proxy
  * restarts. For scaffolding we ship an in-memory LRU-ish map so the dedup stage
  * can be wired end-to-end and unit-tested without I/O.
  *

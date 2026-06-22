@@ -24,7 +24,7 @@ export interface RunPipelineOptions {
  *    measured savings fall below `minSavingsTokens` is reverted — not worth the
  *    accuracy risk for a tiny win.
  *
- * With the default M0 config (all stages off) this is an exact passthrough that
+ * With the default config (all stages off) this is an exact passthrough that
  * still emits a baseline token count.
  */
 export async function runPipeline(
@@ -88,7 +88,7 @@ export async function runPipeline(
 
 /** Build a SessionContext from parts, with sensible defaults wired in. */
 export function createSessionContext(
-  parts: Pick<SessionContext, "sessionId" | "config" | "tokenizer" | "registry">,
+  parts: Pick<SessionContext, "sessionId" | "config" | "tokenizer" | "registry" | "files">,
 ): SessionContext {
   return parts;
 }

@@ -8,8 +8,8 @@ TRE is built to **reduce the tokens every request spends**, so you get **more ou
 
 Point any coding agent at it. It speaks the provider's exact wire protocol, so nothing in your setup changes but the bill.
 
-![status](https://img.shields.io/badge/status-M0%20passthrough-blue)
-![tests](https://img.shields.io/badge/tests-92%20passing-brightgreen)
+![status](https://img.shields.io/badge/status-transparent%20proxy-blue)
+![tests](https://img.shields.io/badge/tests-123%20passing-brightgreen)
 ![coverage](https://img.shields.io/badge/coverage-~99%25-brightgreen)
 ![node](https://img.shields.io/badge/node-%E2%89%A520-339933?logo=node.js&logoColor=white)
 ![typescript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
@@ -101,7 +101,7 @@ curl http://127.0.0.1:8787/v1/sessions
 curl http://127.0.0.1:8787/v1/sessions/my-project
 ```
 
-> In-memory today; **M4 persists sessions to SQLite** so they survive a proxy restart.
+> In-memory today; **sessions will be persisted to SQLite** so they survive a proxy restart.
 
 ---
 
@@ -203,38 +203,81 @@ That's it — run your agent normally. Watch the savings log:
 
 ---
 
+## 🖥️ Dashboard & token calculator
+
+A local web UI visualizes everything the proxy sees — savings over time, recent requests,
+resumable sessions — and lets you flip pipeline stages on/off **live**. It also ships a
+**token calculator**: paste any prompt/file and see the token count, characters-per-token, and a
+rough input-cost estimate per model.
+
+```bash
+node packages/proxy/dist/index.js          # proxy on :8787
+pnpm --filter @tre/dashboard dev           # dashboard on :5173
+```
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ ⚡ Token Reduction Engine                   ● proxy connected  │
+│ [📊 Overview] [📜 Requests] [🎛 Stages] [🧠 Sessions] [🔢 Calc]│
+├──────────────────────────────────────────────────────────────┤
+│  Requests   Tokens saved   Reduction   Avg overhead            │
+│    1,284       512,900       41.7%        4.2 ms               │
+│                                                                │
+│  Overall reduction  ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░  41.7% saved       │
+│                                                                │
+│  Savings by model                                              │
+│  claude-opus-4-8  ███████████▓▓▓▓  812k                        │
+│  gpt-4o           ██████▓▓▓        318k                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+It talks to read-only management endpoints on the proxy — no cloud egress:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /v1/metrics` | Aggregate savings + recent requests |
+| `GET` / `PATCH /v1/config` | Read / live-toggle pipeline stages |
+| `POST /v1/tokenize` | Token calculator (count tokens for text) |
+| `GET /v1/sessions` · `/v1/sessions/:id` | List / resume saved conversations |
+
+---
+
 ## Repo layout
 
 ```
 packages/
   core/        @tre/core   — pure reduction pipeline (no I/O)
   proxy/       @tre/proxy   — Hono server, Anthropic + OpenAI, SSE passthrough
-  mcp/         @tre/mcp     — context-store MCP server (stub, M5)
-  vscode-ext/               — VS Code extension (placeholder, M6)
+  mcp/         @tre/mcp     — context-store MCP server (stub)
+  vscode-ext/               — VS Code extension (placeholder)
 apps/
-  dashboard/   @tre/dashboard — local savings UI (placeholder, M6)
+  dashboard/   @tre/dashboard — local savings UI + token calculator (Vite + React)
 ```
 
 ## Roadmap
 
 ```mermaid
 flowchart LR
-    M0["✅ M0<br/>passthrough"] --> M1["M1<br/>metrics"] --> M2["M2<br/>cache + dedup"] --> M3["M3<br/>diff + slice"] --> M4["M4<br/>persistent sessions"] --> M5["M5<br/>MCP"] --> M6["M6<br/>dashboard + ext"]
-    style M0 fill:#1f6f43,stroke:#2ea043,color:#fff
+    A["✅ Transparent proxy"] --> B["Metrics"] --> C["✅ Dashboard + calculator"] --> D["Cache + dedup"] --> E["Diff + slice"] --> F["✅ Sessions + resume"] --> G["MCP server"] --> H["VS Code extension"]
+    style A fill:#1f6f43,stroke:#2ea043,color:#fff
+    style C fill:#1f6f43,stroke:#2ea043,color:#fff
+    style F fill:#1f6f43,stroke:#2ea043,color:#fff
 ```
 
-**Status:** M0 (transparent passthrough) shipped and verified end-to-end. With the default
-config the proxy forwards requests byte-for-byte and streams responses through untouched —
-every reduction stage exists as a no-op stub, off by default.
+**Status:** the transparent passthrough proxy is shipped and verified end-to-end, with the live
+dashboard, token calculator, and session resume working. With the default config the proxy forwards
+requests byte-for-byte and streams responses through untouched — every reduction stage exists as a
+no-op stub, off by default, ready to be enabled and benchmarked.
 
 ## Develop
 
 ```bash
-pnpm -r build          # tsc across packages
-pnpm -r test           # vitest — 92 tests
+pnpm -r build          # build every package
+pnpm -r test           # vitest — 123 tests
 pnpm test:coverage     # coverage report (~99% on core + proxy)
 pnpm smoke             # runtime check against compiled dist
 pnpm dev:proxy         # run the proxy with hot reload
+pnpm --filter @tre/dashboard dev   # run the dashboard
 ```
 
 <div align="center"><sub>Local-first · protocol-faithful · accuracy-gated</sub></div>

@@ -1,18 +1,20 @@
 import type { TreConfig } from "./types.js";
 
 /**
- * Default config. Every potentially-lossy stage is OFF by default;
- * only lossless, zero-risk stages may eventually flip on once benchmarked.
- * M0 ships with everything off — pure passthrough.
+ * Default config.
+ *
+ * Lossless, low-risk stages ship ON (cache adds only provider cache markers;
+ * strip removes whitespace + exact-duplicate boilerplate). Every potentially-
+ * lossy stage stays OFF until benchmarked and is opt-in via the dashboard.
  */
 export const defaultConfig: TreConfig = {
   stages: {
-    dedup: false,
-    filediff: false,
-    slice: false,
-    strip: false,
-    cache: false,
-    intent: false,
+    cache: true, // lossless: only annotates the stable prefix for provider caching
+    strip: true, // lossless: whitespace + exact-duplicate boilerplate removal
+    dedup: false, // lossy: collapses repeated context — opt-in
+    filediff: false, // lossy: file → diff — opt-in
+    slice: false, // lossy/experimental
+    intent: false, // experimental
   },
   minSavingsTokens: 32,
   store: true,

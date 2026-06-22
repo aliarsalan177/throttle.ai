@@ -11,6 +11,8 @@
  * affect correctness — and it must report whether its change is reversible.
  */
 
+import type { FileVersionStore } from "./fileStore.js";
+
 export type Provider = "anthropic" | "openai";
 
 export type Role = "system" | "user" | "assistant" | "tool";
@@ -125,6 +127,8 @@ export interface SessionContext {
   config: TreConfig;
   tokenizer: Tokenizer;
   registry: ContextRegistry;
+  /** Optional per-session file-version store; enables cross-turn file diffing. */
+  files?: FileVersionStore;
 }
 
 export interface Stage {
@@ -141,7 +145,7 @@ export interface Tokenizer {
   countRequest(req: NormalizedRequest): number;
 }
 
-/** Content-hash → context-id registry for cross-turn dedup (M4 fills this in). */
+/** Content-hash → context-id registry for cross-turn dedup (filled in later). */
 export interface ContextRegistry {
   /** Return an existing id for this content hash, or undefined if unseen this session. */
   lookup(sessionId: string, hash: string): string | undefined;

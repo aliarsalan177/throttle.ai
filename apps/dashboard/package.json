@@ -3,10 +3,23 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Local web UI for savings/logs and live stage toggles (phase 3 / M6).",
+  "description": "Local web UI for savings/logs, live stage toggles, and a token calculator.",
   "scripts": {
-    "build": "node -e \"console.log('[tre] dashboard is a phase-3 placeholder; nothing to build yet')\"",
-    "typecheck": "node -e \"console.log('[tre] dashboard: no typecheck yet')\"",
-    "test": "node -e \"console.log('[tre] dashboard: no tests yet')\""
+    "dev": "vite",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node -e \"console.log('[tre] dashboard: no unit tests (UI app)')\""
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.7"
   }
 }

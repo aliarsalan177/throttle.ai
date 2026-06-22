@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "VS Code extension for TRE config + live savings view (phase 3 / M6).",
+  "description": "VS Code extension for TRE config + live savings view.",
   "scripts": {
-    "build": "node -e \"console.log('[tre] vscode-ext is a phase-3 placeholder; nothing to build yet')\"",
+    "build": "node -e \"console.log('[tre] vscode-ext is a placeholder; nothing to build yet')\"",
     "typecheck": "node -e \"console.log('[tre] vscode-ext: no typecheck yet')\"",
     "test": "node -e \"console.log('[tre] vscode-ext: no tests yet')\""
   }

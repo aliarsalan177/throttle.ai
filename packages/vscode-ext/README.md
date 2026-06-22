@@ -1,4 +1,4 @@
-# @tre/vscode-ext (phase 3 / M6)
+# @tre/vscode-ext
 
 VS Code extension — **UX and config only**.
 
@@ -11,4 +11,4 @@ interceptor — the local proxy is. Its job is:
 - surface live savings from the running proxy,
 - one-click "point this client at the proxy".
 
-**Status: placeholder.** Built in M6.
+**Status: placeholder.** Built later, once the engine and dashboard are in place.

@@ -2,8 +2,13 @@ import { describe, it, expect } from "vitest";
 import { defaultConfig, resolveConfig } from "./config.js";
 
 describe("config", () => {
-  it("defaults every stage OFF (nothing risky is default-on)", () => {
-    expect(Object.values(defaultConfig.stages).every((v) => v === false)).toBe(true);
+  it("defaults: lossless stages on (cache, strip), lossy stages off", () => {
+    expect(defaultConfig.stages.cache).toBe(true);
+    expect(defaultConfig.stages.strip).toBe(true);
+    expect(defaultConfig.stages.dedup).toBe(false);
+    expect(defaultConfig.stages.filediff).toBe(false);
+    expect(defaultConfig.stages.slice).toBe(false);
+    expect(defaultConfig.stages.intent).toBe(false);
   });
 
   it("resolveConfig() with no args equals the defaults", () => {
@@ -24,8 +29,8 @@ describe("config", () => {
   });
 
   it("does not mutate the shared defaultConfig", () => {
-    resolveConfig({ stages: { cache: true } as never, minSavingsTokens: 1 });
-    expect(defaultConfig.stages.cache).toBe(false);
+    resolveConfig({ stages: { dedup: true } as never, minSavingsTokens: 1 });
+    expect(defaultConfig.stages.dedup).toBe(false);
     expect(defaultConfig.minSavingsTokens).toBe(32);
   });
 });

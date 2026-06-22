@@ -1,7 +1,7 @@
 import type { PipelineMetrics } from "./types.js";
 
 /**
- * Metrics helpers. M1 persists these to SQLite and feeds the dashboard; for now
+ * Metrics helpers. A later version persists these to SQLite and feeds the dashboard; for now
  * this is pure shaping/formatting so the proxy can log a baseline.
  *
  * Reminder: never report a token-reduction headline without

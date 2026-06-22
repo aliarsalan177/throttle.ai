@@ -10,6 +10,11 @@ const proxyConfig = {
   logRequests: false,
 };
 
+/** Force pure passthrough (all stages off) for byte-equality assertions. */
+const allStagesOff = {
+  stages: { cache: false, strip: false, dedup: false, filediff: false, slice: false, intent: false },
+} as const;
+
 describe("proxy passthrough (M0)", () => {
   it("forwards the Anthropic body verbatim to the configured upstream", async () => {
     let seenUrl = "";
@@ -20,7 +25,7 @@ describe("proxy passthrough (M0)", () => {
       return new Response('{"ok":true}', { status: 200, headers: { "content-type": "application/json" } });
     }) as unknown as typeof fetch;
 
-    const { app } = createServer({ proxyConfig, fetchImpl });
+    const { app } = createServer({ proxyConfig, fetchImpl, treConfig: allStagesOff });
     const reqBody = {
       model: "claude-opus-4-8",
       system: "be terse",
@@ -35,7 +40,7 @@ describe("proxy passthrough (M0)", () => {
 
     expect(res.status).toBe(200);
     expect(seenUrl).toBe("https://up.anthropic.test/v1/messages");
-    // M0: identical bytes forwarded (no stage enabled).
+    // With all stages off, identical bytes are forwarded.
     expect(seenBody).toEqual(reqBody);
   });
 
@@ -134,7 +139,7 @@ describe("proxy passthrough (M0)", () => {
     const { app } = createServer({ proxyConfig, fetchImpl: (async () => new Response("{}")) as unknown as typeof fetch });
     const body = await (await app.request("/health")).json();
     expect(body.ok).toBe(true);
-    expect(body.stages).toMatchObject({ cache: false, dedup: false });
+    expect(body.stages).toMatchObject({ cache: true, strip: true, dedup: false });
   });
 });
 

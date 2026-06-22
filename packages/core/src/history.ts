@@ -9,9 +9,9 @@ import type { NormalizedMessage } from "./types.js";
  * they left off instead of starting over.
  *
  * Privacy: this holds the user's own prompts/code. It stays local and is only
- * written when `TreConfig.store` is true (`--no-store` disables it). M4 backs it
- * with SQLite so sessions survive a proxy restart; this in-memory implementation
- * keeps the same interface so the wiring and tests are stable.
+ * written when `TreConfig.store` is true (`--no-store` disables it). A later
+ * version backs it with SQLite so sessions survive a proxy restart; this
+ * in-memory implementation keeps the same interface so wiring and tests are stable.
  *
  * Purity: the engine never calls the clock itself — callers pass `at`
  * timestamps — so history stays deterministic and testable.
@@ -68,7 +68,7 @@ export interface SessionHistoryStore {
   clear(sessionId?: string): void;
 }
 
-interface SessionState {
+export interface SessionState {
   sessionId: string;
   model: string;
   messages: NormalizedMessage[];
@@ -143,5 +143,16 @@ export class InMemoryHistoryStore implements SessionHistoryStore {
   clear(sessionId?: string): void {
     if (sessionId === undefined) this.sessions.clear();
     else this.sessions.delete(sessionId);
+  }
+
+  /** Plain-data snapshot for persistence (pure; no I/O). */
+  snapshot(): SessionState[] {
+    return [...this.sessions.values()];
+  }
+
+  /** Rehydrate from a snapshot, replacing current state. */
+  restore(states: SessionState[]): void {
+    this.sessions.clear();
+    for (const s of states) this.sessions.set(s.sessionId, s);
   }
 }

@@ -27,10 +27,15 @@ function ctxWith(config: TreConfig) {
   });
 }
 
+const allOff = () =>
+  resolveConfig({
+    stages: { cache: false, strip: false, dedup: false, filediff: false, slice: false, intent: false },
+  });
+
 describe("runPipeline", () => {
-  it("is an exact passthrough with default (all-off) config", async () => {
+  it("is an exact passthrough when all stages are off", async () => {
     const req = makeReq("hello world this is a prompt");
-    const out = await runPipeline(req, ctxWith(resolveConfig()));
+    const out = await runPipeline(req, ctxWith(allOff()));
     expect(out.req).toBe(req);
     expect(out.metrics.saved).toBe(0);
     expect(out.metrics.tokensBefore).toBe(out.metrics.tokensAfter);
@@ -77,8 +82,9 @@ describe("runPipeline", () => {
         return { req, saved: 0, reversible: true };
       },
     };
-    // config has cache:false (default) -> must not run
-    await runPipeline(makeReq("hi"), ctxWith(resolveConfig()), { stages: [eager] });
+    // explicitly disable cache -> must not run even though stage.enabled is true
+    const cfg = resolveConfig({ stages: { cache: false } as never });
+    await runPipeline(makeReq("hi"), ctxWith(cfg), { stages: [eager] });
     expect(ran).toBe(false);
   });
 

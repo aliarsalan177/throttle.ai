@@ -1,7 +1,7 @@
 import type { NormalizedRequest, SessionContext, Stage, StageResult } from "../types.js";
 
 /**
- * STAGE: structured metadata extraction (optional, M3+).
+ * STAGE: structured metadata extraction (optional).
  *
  * Extracts framework/language/constraints into a compact header block.
  *
