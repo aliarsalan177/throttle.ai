@@ -1,0 +1,31 @@
+import { describe, it, expect } from "vitest";
+import { defaultConfig, resolveConfig } from "./config.js";
+
+describe("config", () => {
+  it("defaults every stage OFF (nothing risky is default-on)", () => {
+    expect(Object.values(defaultConfig.stages).every((v) => v === false)).toBe(true);
+  });
+
+  it("resolveConfig() with no args equals the defaults", () => {
+    expect(resolveConfig()).toEqual(defaultConfig);
+  });
+
+  it("merges a partial stage toggle without dropping the others", () => {
+    const cfg = resolveConfig({ stages: { cache: true } as never });
+    expect(cfg.stages.cache).toBe(true);
+    expect(cfg.stages.dedup).toBe(false);
+    expect(cfg.stages.intent).toBe(false);
+  });
+
+  it("overrides scalar fields", () => {
+    const cfg = resolveConfig({ minSavingsTokens: 99, store: false });
+    expect(cfg.minSavingsTokens).toBe(99);
+    expect(cfg.store).toBe(false);
+  });
+
+  it("does not mutate the shared defaultConfig", () => {
+    resolveConfig({ stages: { cache: true } as never, minSavingsTokens: 1 });
+    expect(defaultConfig.stages.cache).toBe(false);
+    expect(defaultConfig.minSavingsTokens).toBe(32);
+  });
+});

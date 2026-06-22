@@ -1,0 +1,11 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+allowBuilds:
+  esbuild: true
+
+# esbuild ships a native binary via a postinstall script; trusted dev tool
+# (pulled in by tsx/vitest). Allow it so installs don't gate on approval.
+onlyBuiltDependencies:
+  - esbuild

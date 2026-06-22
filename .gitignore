@@ -1,0 +1,32 @@
+
+# Ignore cursor AI rules
+.cursor/rules/codacy.mdc
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Local data / config
+*.sqlite
+*.sqlite-journal
+.trerc
+.trerc.*
+!.trerc.example
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,12 @@
+{
+  "name": "@tre/dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local web UI for savings/logs and live stage toggles (phase 3 / M6).",
+  "scripts": {
+    "build": "node -e \"console.log('[tre] dashboard is a phase-3 placeholder; nothing to build yet')\"",
+    "typecheck": "node -e \"console.log('[tre] dashboard: no typecheck yet')\"",
+    "test": "node -e \"console.log('[tre] dashboard: no tests yet')\""
+  }
+}
