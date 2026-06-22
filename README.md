@@ -63,6 +63,48 @@ self-reported), and any lossy stage that doesn't beat a threshold is **auto-reve
 
 ---
 
+## 🧠 Session memory & resume
+
+Because the proxy sees **every turn** of every conversation, it can remember them. So when your
+agent is closed, crashes, or a chat **hits the context-window limit and gets cut off**, you don't
+start over — you **resume from exactly where you left off**.
+
+```mermaid
+flowchart LR
+    subgraph Day1["🕐 Session gets cut off"]
+        A1["Agent chats…"] --> A2["💥 context limit / closed"]
+    end
+    A1 -.->|every turn saved| DB[("🧠 Session memory<br/>local store")]
+    subgraph Day2["🔁 Pick up later"]
+        B1["GET /v1/sessions/:id"] --> B2["▶️ resume from last snapshot"]
+    end
+    DB --> B1
+```
+
+- 🗂️ **Unlimited sessions** — keep as many conversations as you want, each under its own id
+  (pass `x-tre-session: my-project`); list and resume any of them anytime.
+- ▶️ **One-call resume** — the latest full conversation snapshot is returned ready to continue.
+- 📊 **Per-session timeline** — turns, models used, and cumulative token spend.
+- 🔒 **Yours & local** — stored on your machine only; disable with `--no-store`, wipe with a `DELETE`.
+
+| Endpoint | What it does |
+|---|---|
+| `GET /v1/sessions` | List every resumable session (most recent first) |
+| `GET /v1/sessions/:id` | Resume — returns the conversation snapshot + timeline |
+| `DELETE /v1/sessions/:id` | Purge a session (privacy / TTL) |
+
+```bash
+# see what you can pick back up
+curl http://127.0.0.1:8787/v1/sessions
+
+# resume a specific project's conversation
+curl http://127.0.0.1:8787/v1/sessions/my-project
+```
+
+> In-memory today; **M4 persists sessions to SQLite** so they survive a proxy restart.
+
+---
+
 ## How tokens are counted
 
 LLMs don't bill by characters or words — they bill by **tokens**, the sub-word chunks a model's
@@ -177,7 +219,7 @@ apps/
 
 ```mermaid
 flowchart LR
-    M0["✅ M0<br/>passthrough"] --> M1["M1<br/>metrics"] --> M2["M2<br/>cache + dedup"] --> M3["M3<br/>diff + slice"] --> M4["M4<br/>context registry"] --> M5["M5<br/>MCP"] --> M6["M6<br/>dashboard + ext"]
+    M0["✅ M0<br/>passthrough"] --> M1["M1<br/>metrics"] --> M2["M2<br/>cache + dedup"] --> M3["M3<br/>diff + slice"] --> M4["M4<br/>persistent sessions"] --> M5["M5<br/>MCP"] --> M6["M6<br/>dashboard + ext"]
     style M0 fill:#1f6f43,stroke:#2ea043,color:#fff
 ```
 

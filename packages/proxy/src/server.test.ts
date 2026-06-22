@@ -138,6 +138,67 @@ describe("proxy passthrough (M0)", () => {
   });
 });
 
+describe("session continuity / resume", () => {
+  const ok = (async () => new Response("{}", { status: 200 })) as unknown as typeof fetch;
+
+  const send = (app: { request: typeof fetch }, session: string, messages: unknown[]) =>
+    app.request("/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tre-session": session },
+      body: JSON.stringify({ model: "claude-opus-4-8", messages }),
+    });
+
+  it("records each turn and lets the user resume from where they left off", async () => {
+    let clock = 1000;
+    const { app } = createServer({ proxyConfig, fetchImpl: ok, now: () => (clock += 1000) });
+
+    await send(app as never, "proj-A", [{ role: "user", content: "start the feature" }]);
+    await send(app as never, "proj-A", [
+      { role: "user", content: "start the feature" },
+      { role: "assistant", content: "ok" },
+      { role: "user", content: "now add tests" },
+    ]);
+
+    const cp = await (await app.request("/v1/sessions/proj-A")).json();
+    expect(cp.sessionId).toBe("proj-A");
+    expect(cp.turns).toBe(2);
+    // Resume point is the latest, fullest conversation snapshot.
+    expect(cp.messages).toHaveLength(3);
+    expect(cp.messages[2].content[0].text).toBe("now add tests");
+  });
+
+  it("lists resumable sessions, most recent first", async () => {
+    let clock = 0;
+    const { app } = createServer({ proxyConfig, fetchImpl: ok, now: () => (clock += 1000) });
+    await send(app as never, "older", [{ role: "user", content: "a" }]);
+    await send(app as never, "newer", [{ role: "user", content: "b" }]);
+
+    const { sessions } = await (await app.request("/v1/sessions")).json();
+    expect(sessions.map((s: { sessionId: string }) => s.sessionId)).toEqual(["newer", "older"]);
+  });
+
+  it("404s when resuming an unknown session", async () => {
+    const { app } = createServer({ proxyConfig, fetchImpl: ok });
+    const res = await app.request("/v1/sessions/does-not-exist");
+    expect(res.status).toBe(404);
+  });
+
+  it("purges a session on DELETE (privacy)", async () => {
+    const { app } = createServer({ proxyConfig, fetchImpl: ok });
+    await send(app as never, "temp", [{ role: "user", content: "secret" }]);
+    expect((await app.request("/v1/sessions/temp")).status).toBe(200);
+    await app.request("/v1/sessions/temp", { method: "DELETE" });
+    expect((await app.request("/v1/sessions/temp")).status).toBe(404);
+  });
+
+  it("does NOT record history in --no-store mode", async () => {
+    const { app } = createServer({ proxyConfig, fetchImpl: ok, treConfig: { store: false } });
+    await send(app as never, "private", [{ role: "user", content: "hi" }]);
+    const { sessions } = await (await app.request("/v1/sessions")).json();
+    expect(sessions).toHaveLength(0);
+  });
+});
+
 describe("adapter round-trip", () => {
   it("anthropic normalize→denormalize preserves a tool-using conversation", () => {
     const body = {

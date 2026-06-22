@@ -4,8 +4,10 @@ import {
   createSessionContext,
   formatLogLine,
   InMemoryContextRegistry,
+  InMemoryHistoryStore,
   resolveConfig,
   runPipeline,
+  type SessionHistoryStore,
   type TreConfig,
 } from "@tre/core";
 import { anthropicAdapter } from "./adapters/anthropic.js";
@@ -20,6 +22,10 @@ export interface ServerDeps {
   /** Injectable fetch for tests; defaults to global fetch. */
   fetchImpl?: typeof fetch;
   logger?: (line: string) => void;
+  /** Session history store; defaults to a process-wide in-memory store. */
+  history?: SessionHistoryStore;
+  /** Injectable clock for deterministic history timestamps; defaults to Date.now. */
+  now?: () => number;
 }
 
 /**
@@ -31,13 +37,31 @@ export function createServer(deps: ServerDeps = {}) {
   const treConfig = resolveConfig(deps.treConfig);
   const fetchImpl = deps.fetchImpl ?? fetch;
   const log = deps.logger ?? ((line: string) => console.log(line));
+  const now = deps.now ?? (() => Date.now());
 
-  // One registry process-wide; keyed internally by session id.
+  // One registry + history store process-wide; both keyed by session id.
   const registry = new InMemoryContextRegistry();
+  const history = deps.history ?? new InMemoryHistoryStore();
 
   const app = new Hono();
 
   app.get("/health", (c) => c.json({ ok: true, name: "tre-proxy", stages: treConfig.stages }));
+
+  // --- Session continuity: list / resume / purge saved conversations ---
+  app.get("/v1/sessions", (c) => c.json({ sessions: history.list() }));
+
+  app.get("/v1/sessions/:id", (c) => {
+    const checkpoint = history.resume(c.req.param("id"));
+    if (!checkpoint) {
+      return c.json({ error: { type: "not_found", message: "no such session" } }, 404);
+    }
+    return c.json(checkpoint);
+  });
+
+  app.delete("/v1/sessions/:id", (c) => {
+    history.clear(c.req.param("id"));
+    return c.json({ ok: true });
+  });
 
   const handle = (adapter: Adapter) =>
     app.post(adapter.path, async (c) => {
@@ -58,6 +82,17 @@ export function createServer(deps: ServerDeps = {}) {
       });
       const { req: optimized, metrics } = await runPipeline(normalized, ctx);
       if (proxyConfig.logRequests) log(formatLogLine(optimized.model, metrics));
+
+      // Persist this turn so the session can be resumed later (off in --no-store).
+      // We snapshot the conversation as the user sent it, not the reduced form.
+      if (treConfig.store) {
+        history.append(ctx.sessionId, {
+          model: normalized.model,
+          messages: normalized.messages,
+          tokens: metrics.tokensBefore,
+          at: now(),
+        });
+      }
 
       // If no stage touched the request, forward the original bytes verbatim.
       const outboundBody = optimized === normalized ? body : adapter.denormalize(optimized);
@@ -89,5 +124,5 @@ export function createServer(deps: ServerDeps = {}) {
   handle(anthropicAdapter);
   handle(openaiAdapter);
 
-  return { app, proxyConfig };
+  return { app, proxyConfig, history };
 }

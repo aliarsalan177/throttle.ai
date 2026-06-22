@@ -8,6 +8,14 @@ export * from "./types.js";
 export { defaultConfig, resolveConfig } from "./config.js";
 export { ApproxTokenizer, approxTokenizer } from "./tokenizer.js";
 export { InMemoryContextRegistry } from "./memory.js";
+export { InMemoryHistoryStore } from "./history.js";
+export type {
+  SessionHistoryStore,
+  SessionCheckpoint,
+  SessionSummary,
+  TurnRecord,
+  AppendTurn,
+} from "./history.js";
 export { runPipeline, createSessionContext } from "./pipeline.js";
 export type { RunPipelineOptions } from "./pipeline.js";
 export { orderedStages, toggleKeyFor } from "./stages/index.js";
